@@ -95,30 +95,35 @@ function Show-Statistics {
 # Fungsi setup awal
 function Initialize-Setup {
     Write-Log "🔧 Melakukan setup awal..."
-    
-    # Cek apakah git sudah dikonfigurasi
-    $GitUser = git config user.name
-    $GitEmail = git config user.email
-    
-    if (-not $GitUser -or -not $GitEmail) {
-        Write-Host "⚠️  Git belum dikonfigurasi. Silakan konfigurasi terlebih dahulu:"
-        Write-Host "git config --global user.name 'Nama Anda'"
-        Write-Host "git config --global user.email 'email@anda.com'"
-        return
+
+    try {
+        # Cek apakah git sudah dikonfigurasi
+        $GitUser = git config user.name
+        $GitEmail = git config user.email
+
+        if (-not $GitUser -or -not $GitEmail) {
+            Write-Host "⚠️  Git belum dikonfigurasi. Silakan konfigurasi terlebih dahulu:"
+            Write-Host "git config --global user.name 'Nama Anda'"
+            Write-Host "git config --global user.email 'email@anda.com'"
+            return
+        }
+
+        Write-Log "✅ Git sudah dikonfigurasi untuk: $GitUser ($GitEmail)"
+
+        # Buat initial commit jika belum ada
+        $CommitCount = git rev-list --count HEAD 2>$null
+        if (-not $CommitCount -or $CommitCount -eq "0") {
+            Write-Log "📝 Membuat initial commit..."
+            git add .
+            git commit -m "🎉 Initial commit - GitHub contribution automation setup"
+            Write-Log "✅ Initial commit berhasil dibuat"
+        }
+
+        Write-Log "🎯 Setup selesai! Anda dapat mulai menggunakan automation."
     }
-    
-    Write-Log "✅ Git sudah dikonfigurasi untuk: $GitUser ($GitEmail)"
-    
-    # Buat initial commit jika belum ada
-    $CommitCount = git rev-list --count HEAD 2>$null
-    if (-not $CommitCount -or $CommitCount -eq "0") {
-        Write-Log "📝 Membuat initial commit..."
-        git add .
-        git commit -m "🎉 Initial commit - GitHub contribution automation setup"
-        Write-Log "✅ Initial commit berhasil dibuat"
+    catch {
+        Write-Log "❌ Error setup: $($_.Exception.Message)"
     }
-    
-    Write-Log "🎯 Setup selesai! Anda dapat mulai menggunakan automation."
 }
 
 # Fungsi untuk setup scheduled task
