@@ -29,7 +29,7 @@ class AutoPushSystem {
                     'evening' => '21:00'
                 ],
                 'remote_name' => 'origin',
-                'branch_name' => 'main'
+                'branch_name' => 'master'
             ];
             file_put_contents($this->configFile, json_encode($config, JSON_PRETTY_PRINT));
         }
