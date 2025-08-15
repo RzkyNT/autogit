@@ -27,26 +27,26 @@ if ($Mode -eq "distributed") {
     # Strategy 1: Distributed throughout the day
     Write-Host "Creating distributed schedule..." -ForegroundColor Cyan
     
-    # Morning burst (7-9 AM): 5-8 commits
-    $MorningAction = New-ScheduledTaskAction -Execute "php" -Argument "multi_commit_automation.php run" -WorkingDirectory $ScriptPath
+    # Morning burst (7-9 AM): 5-8 commits with auto-push
+    $MorningAction = New-ScheduledTaskAction -Execute "php" -Argument "multi_commit_automation.php push 3" -WorkingDirectory $ScriptPath
     $MorningTrigger = New-ScheduledTaskTrigger -Daily -At "07:30"
     $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
-    Register-ScheduledTask -TaskName "$TaskBaseName-Morning" -Action $MorningAction -Trigger $MorningTrigger -Settings $Settings -Description "Morning commit burst"
-    
-    # Midday activity (11 AM - 1 PM): 3-6 commits
-    $MiddayAction = New-ScheduledTaskAction -Execute "php" -Argument "multi_commit_automation.php run" -WorkingDirectory $ScriptPath
+    Register-ScheduledTask -TaskName "$TaskBaseName-Morning" -Action $MorningAction -Trigger $MorningTrigger -Settings $Settings -Description "Morning commit burst with auto-push"
+
+    # Midday activity (11 AM - 1 PM): 3-6 commits with auto-push
+    $MiddayAction = New-ScheduledTaskAction -Execute "php" -Argument "multi_commit_automation.php push 4" -WorkingDirectory $ScriptPath
     $MiddayTrigger = New-ScheduledTaskTrigger -Daily -At "12:00"
-    Register-ScheduledTask -TaskName "$TaskBaseName-Midday" -Action $MiddayAction -Trigger $MiddayTrigger -Settings $Settings -Description "Midday commit activity"
-    
-    # Afternoon work (3-5 PM): 4-8 commits
-    $AfternoonAction = New-ScheduledTaskAction -Execute "php" -Argument "multi_commit_automation.php run" -WorkingDirectory $ScriptPath
+    Register-ScheduledTask -TaskName "$TaskBaseName-Midday" -Action $MiddayAction -Trigger $MiddayTrigger -Settings $Settings -Description "Midday commit activity with auto-push"
+
+    # Afternoon work (3-5 PM): 4-8 commits with auto-push
+    $AfternoonAction = New-ScheduledTaskAction -Execute "php" -Argument "multi_commit_automation.php push 5" -WorkingDirectory $ScriptPath
     $AfternoonTrigger = New-ScheduledTaskTrigger -Daily -At "15:30"
-    Register-ScheduledTask -TaskName "$TaskBaseName-Afternoon" -Action $AfternoonAction -Trigger $AfternoonTrigger -Settings $Settings -Description "Afternoon commit work"
-    
-    # Evening session (7-9 PM): 3-8 commits
-    $EveningAction = New-ScheduledTaskAction -Execute "php" -Argument "multi_commit_automation.php run" -WorkingDirectory $ScriptPath
+    Register-ScheduledTask -TaskName "$TaskBaseName-Afternoon" -Action $AfternoonAction -Trigger $AfternoonTrigger -Settings $Settings -Description "Afternoon commit work with auto-push"
+
+    # Evening session (7-9 PM): 3-8 commits with auto-push
+    $EveningAction = New-ScheduledTaskAction -Execute "php" -Argument "multi_commit_automation.php push 3" -WorkingDirectory $ScriptPath
     $EveningTrigger = New-ScheduledTaskTrigger -Daily -At "19:30"
-    Register-ScheduledTask -TaskName "$TaskBaseName-Evening" -Action $EveningAction -Trigger $EveningTrigger -Settings $Settings -Description "Evening commit session"
+    Register-ScheduledTask -TaskName "$TaskBaseName-Evening" -Action $EveningAction -Trigger $EveningTrigger -Settings $Settings -Description "Evening commit session with auto-push"
     
     Write-Host "Created 4 distributed tasks:" -ForegroundColor Green
     Write-Host "  - Morning (07:30): 5-8 commits" -ForegroundColor White

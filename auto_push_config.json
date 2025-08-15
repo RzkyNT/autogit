@@ -1,0 +1,13 @@
+{
+    "auto_push_enabled": true,
+    "push_interval_commits": 5,
+    "push_interval_minutes": 30,
+    "max_unpushed_commits": 20,
+    "push_schedule": {
+        "morning": "09:00",
+        "afternoon": "15:00",
+        "evening": "21:00"
+    },
+    "remote_name": "origin",
+    "branch_name": "main"
+}

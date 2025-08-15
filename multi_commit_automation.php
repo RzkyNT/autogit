@@ -37,32 +37,37 @@ class MultiCommitAutomation {
     /**
      * Jalankan automation untuk hari ini
      */
-    public function runDailyAutomation() {
+    public function runDailyAutomation($autoPush = false, $pushInterval = 5) {
         $today = date('Y-m-d');
         $todayCommits = $this->getTodayCommitCount();
         $targetCommits = rand($this->targetCommitsMin, $this->targetCommitsMax);
-        
+
         echo "🎯 Target commits hari ini: $targetCommits\n";
         echo "📊 Commits yang sudah ada: $todayCommits\n";
-        
+        echo "📤 Auto-push: " . ($autoPush ? "Enabled (every $pushInterval commits)" : "Disabled") . "\n";
+
         $remainingCommits = $targetCommits - $todayCommits;
-        
+
         if ($remainingCommits <= 0) {
             echo "✅ Target sudah tercapai untuk hari ini!\n";
+            if ($autoPush) {
+                $this->performGitPush();
+            }
             return true;
         }
-        
+
         echo "🚀 Perlu $remainingCommits commit lagi\n";
-        
+
         // Bagi commits ke dalam beberapa batch dengan interval
         $batches = $this->distributeBatches($remainingCommits);
-        
+        $commitCounter = 0;
+
         foreach ($batches as $batchIndex => $batchSize) {
             echo "\n📦 Batch " . ($batchIndex + 1) . ": $batchSize commits\n";
-            
+
             for ($i = 0; $i < $batchSize; $i++) {
-                $this->createSingleCommit($batchIndex + 1, $i + 1);
-                
+                $this->createSingleCommit($batchIndex + 1, $i + 1, $autoPush && (++$commitCounter % $pushInterval == 0));
+
                 // Delay antar commit dalam batch (1-5 detik)
                 if ($i < $batchSize - 1) {
                     $delay = rand(1, 5);
@@ -70,7 +75,12 @@ class MultiCommitAutomation {
                     sleep($delay);
                 }
             }
-            
+
+            // Push setelah setiap batch jika auto-push enabled
+            if ($autoPush && $batchIndex < count($batches) - 1) {
+                $this->performGitPush();
+            }
+
             // Delay antar batch (30-120 detik)
             if ($batchIndex < count($batches) - 1) {
                 $batchDelay = rand(30, 120);
@@ -78,11 +88,16 @@ class MultiCommitAutomation {
                 sleep($batchDelay);
             }
         }
-        
+
+        // Final push jika belum di-push
+        if ($autoPush) {
+            $this->performGitPush();
+        }
+
         $this->updateDailyLog($today, $remainingCommits);
-        
+
         echo "\n🎉 Automation selesai! Total commits hari ini: " . $this->getTodayCommitCount() . "\n";
-        
+
         return true;
     }
     
@@ -105,27 +120,27 @@ class MultiCommitAutomation {
     /**
      * Buat single commit dengan variasi
      */
-    private function createSingleCommit($batchNum, $commitNum) {
+    private function createSingleCommit($batchNum, $commitNum, $shouldPush = false) {
         $strategy = rand(1, 6);
-        
+
         switch ($strategy) {
             case 1:
-                $this->createDummyFileCommit($batchNum, $commitNum);
+                $this->createDummyFileCommit($batchNum, $commitNum, $shouldPush);
                 break;
             case 2:
-                $this->createUpdateCommit($batchNum, $commitNum);
+                $this->createUpdateCommit($batchNum, $commitNum, $shouldPush);
                 break;
             case 3:
-                $this->createLogCommit($batchNum, $commitNum);
+                $this->createLogCommit($batchNum, $commitNum, $shouldPush);
                 break;
             case 4:
-                $this->createConfigCommit($batchNum, $commitNum);
+                $this->createConfigCommit($batchNum, $commitNum, $shouldPush);
                 break;
             case 5:
-                $this->createDataCommit($batchNum, $commitNum);
+                $this->createDataCommit($batchNum, $commitNum, $shouldPush);
                 break;
             case 6:
-                $this->createProgressCommit($batchNum, $commitNum);
+                $this->createProgressCommit($batchNum, $commitNum, $shouldPush);
                 break;
         }
     }
@@ -133,12 +148,12 @@ class MultiCommitAutomation {
     /**
      * Strategy 1: Dummy file commit
      */
-    private function createDummyFileCommit($batch, $commit) {
+    private function createDummyFileCommit($batch, $commit, $shouldPush = false) {
         $filename = $this->dummyDir . '/dummy_' . date('Ymd_His') . '_' . $batch . '_' . $commit . '.txt';
         $content = "Dummy commit\nBatch: $batch\nCommit: $commit\nTime: " . date('Y-m-d H:i:s') . "\nRandom: " . rand(10000, 99999) . "\n";
-        
+
         file_put_contents($filename, $content);
-        
+
         $messages = [
             "Add dummy file batch $batch commit $commit",
             "Create temp file $batch-$commit",
@@ -146,23 +161,23 @@ class MultiCommitAutomation {
             "Add data file $batch.$commit",
             "Create dummy $batch-$commit"
         ];
-        
-        $this->performGitCommit($messages[array_rand($messages)]);
+
+        $this->performGitCommit($messages[array_rand($messages)], $shouldPush);
         echo "📄 Dummy file commit: $filename\n";
     }
-    
+
     /**
      * Strategy 2: Update existing file
      */
-    private function createUpdateCommit($batch, $commit) {
+    private function createUpdateCommit($batch, $commit, $shouldPush = false) {
         $files = glob($this->dummyDir . '/*.txt');
-        
+
         if (!empty($files)) {
             $file = $files[array_rand($files)];
             $content = file_get_contents($file);
             $content .= "\nUpdate: " . date('Y-m-d H:i:s') . " Batch $batch Commit $commit\n";
             file_put_contents($file, $content);
-            
+
             $messages = [
                 "Update file batch $batch commit $commit",
                 "Modify data $batch-$commit",
@@ -170,11 +185,11 @@ class MultiCommitAutomation {
                 "Revise file $batch-$commit",
                 "Edit data batch $batch"
             ];
-            
-            $this->performGitCommit($messages[array_rand($messages)]);
+
+            $this->performGitCommit($messages[array_rand($messages)], $shouldPush);
             echo "📝 Update commit: " . basename($file) . "\n";
         } else {
-            $this->createDummyFileCommit($batch, $commit);
+            $this->createDummyFileCommit($batch, $commit, $shouldPush);
         }
     }
     
@@ -271,10 +286,26 @@ class MultiCommitAutomation {
     /**
      * Perform git commit
      */
-    private function performGitCommit($message) {
+    private function performGitCommit($message, $autoPush = false) {
         shell_exec('git add .');
         $commitCommand = 'git commit -m "' . addslashes($message) . '" 2>&1';
         shell_exec($commitCommand);
+
+        if ($autoPush) {
+            $this->performGitPush();
+        }
+    }
+
+    /**
+     * Perform git push
+     */
+    private function performGitPush() {
+        $pushResult = shell_exec('git push origin main 2>&1');
+        if (strpos($pushResult, 'error') === false && strpos($pushResult, 'fatal') === false) {
+            echo "📤 Pushed to GitHub\n";
+        } else {
+            echo "⚠️ Push failed: $pushResult\n";
+        }
     }
     
     /**
@@ -358,38 +389,52 @@ class MultiCommitAutomation {
 // CLI Interface
 if (php_sapi_name() === 'cli') {
     $automation = new MultiCommitAutomation();
-    
+
     $action = $argv[1] ?? 'run';
-    
+
     switch ($action) {
         case 'run':
         case 'auto':
-            $automation->runDailyAutomation();
+            $autoPush = isset($argv[2]) && $argv[2] === 'push';
+            $pushInterval = isset($argv[3]) ? (int)$argv[3] : 5;
+            $automation->runDailyAutomation($autoPush, $pushInterval);
             break;
-            
+
+        case 'push':
+            $pushInterval = isset($argv[2]) ? (int)$argv[2] : 5;
+            $automation->runDailyAutomation(true, $pushInterval);
+            break;
+
         case 'stats':
             $automation->showStats();
             break;
-            
+
         case 'cleanup':
             $days = isset($argv[2]) ? (int)$argv[2] : 7;
             $automation->cleanup($days);
             break;
-            
+
         case 'help':
         default:
             echo "Multi Commit Automation System\n";
             echo "==============================\n";
             echo "Usage: php multi_commit_automation.php [command] [options]\n\n";
             echo "Commands:\n";
-            echo "  run/auto         - Jalankan automation (15-40 commits)\n";
-            echo "  stats            - Tampilkan statistik\n";
-            echo "  cleanup [days]   - Hapus file lama (default: 7 hari)\n";
-            echo "  help             - Tampilkan bantuan\n\n";
+            echo "  run [push] [interval]  - Jalankan automation (15-40 commits)\n";
+            echo "  push [interval]        - Jalankan dengan auto-push (default: every 5 commits)\n";
+            echo "  stats                  - Tampilkan statistik\n";
+            echo "  cleanup [days]         - Hapus file lama (default: 7 hari)\n";
+            echo "  help                   - Tampilkan bantuan\n\n";
             echo "Examples:\n";
             echo "  php multi_commit_automation.php run\n";
+            echo "  php multi_commit_automation.php run push\n";
+            echo "  php multi_commit_automation.php run push 3\n";
+            echo "  php multi_commit_automation.php push\n";
+            echo "  php multi_commit_automation.php push 10\n";
             echo "  php multi_commit_automation.php stats\n";
-            echo "  php multi_commit_automation.php cleanup 3\n";
+            echo "\nAuto-Push Options:\n";
+            echo "  push           - Enable auto-push to GitHub\n";
+            echo "  [interval]     - Push every N commits (default: 5)\n";
             break;
     }
 }
