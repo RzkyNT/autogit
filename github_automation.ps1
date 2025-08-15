@@ -3,8 +3,12 @@
 
 param(
     [Parameter(Mandatory=$false)]
-    [ValidateSet("commit", "stats", "setup", "schedule", "help")]
-    [string]$Action = "commit"
+    [ValidateSet("commit", "dummy", "stats", "setup", "schedule", "help")]
+    [string]$Action = "commit",
+
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("meaningful", "dummy")]
+    [string]$Mode = "meaningful"
 )
 
 # Konfigurasi
@@ -22,20 +26,50 @@ function Write-Log {
 
 # Fungsi untuk melakukan daily commit
 function Invoke-DailyCommit {
-    Write-Log "🚀 Memulai daily commit automation..."
-    
+    param([string]$CommitMode = "meaningful")
+
+    Write-Log "🚀 Memulai daily commit automation (mode: $CommitMode)..."
+
     try {
         # Pindah ke direktori script
         Set-Location $ScriptPath
-        
-        # Jalankan PHP script
-        $Result = & php daily_commit.php commit
-        
+
+        # Jalankan PHP script berdasarkan mode
+        if ($CommitMode -eq "dummy") {
+            Write-Log "📄 Menggunakan dummy commit mode..."
+            & php dummy_commit.php single
+        } else {
+            Write-Log "📝 Menggunakan meaningful commit mode..."
+            & php daily_commit.php commit meaningful
+        }
+
         if ($LASTEXITCODE -eq 0) {
             Write-Log "✅ Daily commit berhasil dilakukan"
             return $true
         } else {
             Write-Log "❌ Daily commit gagal"
+            return $false
+        }
+    }
+    catch {
+        Write-Log "❌ Error: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+# Fungsi untuk melakukan dummy commit
+function Invoke-DummyCommit {
+    Write-Log "🤖 Memulai dummy commit automation..."
+
+    try {
+        Set-Location $ScriptPath
+        & php dummy_commit.php single
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Log "✅ Dummy commit berhasil dilakukan"
+            return $true
+        } else {
+            Write-Log "❌ Dummy commit gagal"
             return $false
         }
     }
@@ -127,26 +161,41 @@ function Show-Help {
 🤖 GitHub Contribution Automation Tool
 
 USAGE:
-    .\github_automation.ps1 [ACTION]
+    .\github_automation.ps1 [ACTION] [OPTIONS]
 
 ACTIONS:
     commit      Lakukan daily commit (default)
+    dummy       Lakukan dummy commit sederhana
     stats       Tampilkan statistik kontribusi
     setup       Setup awal repository dan konfigurasi
     schedule    Setup scheduled task untuk automation
     help        Tampilkan bantuan ini
 
+COMMIT MODES:
+    -Mode meaningful    Commit dengan perubahan bermakna (default)
+    -Mode dummy        Commit file dummy sederhana
+
 EXAMPLES:
     .\github_automation.ps1 commit
+    .\github_automation.ps1 commit -Mode meaningful
+    .\github_automation.ps1 commit -Mode dummy
+    .\github_automation.ps1 dummy
     .\github_automation.ps1 stats
     .\github_automation.ps1 setup
     .\github_automation.ps1 schedule
 
+DUMMY COMMIT USAGE:
+    php dummy_commit.php single        # 1 file dummy
+    php dummy_commit.php multiple 5    # 5 file dummy
+    php dummy_commit.php update        # Update file yang ada
+    php dummy_commit.php cleanup       # Hapus file lama
+
 TIPS:
     - Jalankan 'setup' terlebih dahulu untuk konfigurasi awal
     - Gunakan 'schedule' untuk automation harian
+    - Mode 'dummy' untuk "gaming the system" GitHub green
+    - Mode 'meaningful' untuk kontribusi yang bermakna
     - Gunakan 'stats' untuk melihat progress kontribusi
-    - Pastikan repository sudah terhubung dengan GitHub
 
 📚 Untuk informasi lebih lanjut, baca dokumentasi README.md
 "@
@@ -158,7 +207,10 @@ Write-Host "=======================================" -ForegroundColor Cyan
 
 switch ($Action.ToLower()) {
     "commit" {
-        Invoke-DailyCommit
+        Invoke-DailyCommit -CommitMode $Mode
+    }
+    "dummy" {
+        Invoke-DummyCommit
     }
     "stats" {
         Show-Statistics
