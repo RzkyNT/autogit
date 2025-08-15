@@ -1,6 +1,8 @@
 {
     "start_date": "2025-08-15",
-    "daily_commits": [],
-    "total_commits": 0,
-    "last_run": null
+    "daily_commits": {
+        "2025-08-15": 30
+    },
+    "total_commits": 30,
+    "last_run": "2025-08-15 04:34:05"
 }
