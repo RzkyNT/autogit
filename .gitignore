@@ -1,0 +1,68 @@
+# GitHub Contribution Automation - .gitignore
+
+# Log files
+*.log
+automation.log
+contribution_log.txt
+
+# Temporary files
+*.tmp
+*.temp
+test_write.tmp
+
+# Data files (optional - uncomment if you want to keep data private)
+# daily_progress.json
+# github_activities.json
+# github_config.json
+
+# Generated reports
+weekly_report_*.txt
+monthly_report_*.txt
+
+# Project directories (optional - uncomment if you don't want to commit generated projects)
+# projects/
+
+# Backup files
+*.backup
+*.bak
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# PHP specific
+vendor/
+composer.lock
+
+# Node.js (if any JS projects are generated)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (if any Python projects are generated)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Personal configuration (uncomment if you have sensitive data)
+# config.local.json
+# .env
+# credentials.json

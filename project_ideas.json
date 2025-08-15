@@ -1,0 +1,50 @@
+{
+    "web_projects": [
+        "Simple Calculator",
+        "Todo List App",
+        "Weather App",
+        "Quote Generator",
+        "Color Palette Generator",
+        "Password Generator",
+        "QR Code Generator",
+        "Unit Converter",
+        "Expense Tracker",
+        "Recipe Finder"
+    ],
+    "php_projects": [
+        "Contact Form Handler",
+        "File Upload System",
+        "Simple CMS",
+        "User Authentication System",
+        "API Rate Limiter",
+        "Log Analyzer",
+        "Database Backup Tool",
+        "Email Newsletter System",
+        "Image Resizer",
+        "CSV Data Processor"
+    ],
+    "utility_scripts": [
+        "File Organizer",
+        "Duplicate File Finder",
+        "System Monitor",
+        "Backup Automation",
+        "Text File Merger",
+        "Image Optimizer",
+        "Git Helper Scripts",
+        "Development Environment Setup",
+        "Code Formatter",
+        "Documentation Generator"
+    ],
+    "learning_projects": [
+        "Algorithm Implementations",
+        "Design Pattern Examples",
+        "Code Challenges Solutions",
+        "Tutorial Follow-alongs",
+        "Concept Demonstrations",
+        "Best Practices Examples",
+        "Performance Comparisons",
+        "Security Implementations",
+        "Testing Examples",
+        "Refactoring Exercises"
+    ]
+}
