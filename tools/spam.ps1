@@ -33,10 +33,24 @@ for ($i = 1; $i -le $Times; $i++) {
         }
     }
 
-    # Buka PowerShell window baru
+    # Buka PowerShell window baru dengan loop curl
     Write-Host "[$i/$Times] Opening new PowerShell window (Instance: $($runningProcesses.Count + 1)/$MaxInstances)" -ForegroundColor Cyan
 
-    $process = Start-Process -FilePath "powershell.exe" -ArgumentList "-Command", "Write-Host 'Instance $i - Executing curl...' -ForegroundColor Green; curl '$Target'; Write-Host 'Instance $i - Done! Closing in 2 seconds...' -ForegroundColor Yellow; Start-Sleep 2; exit" -PassThru
+    # Command untuk setiap instance: loop curl sebanyak CurlsPerInstance kali
+    $command = @"
+Write-Host 'Instance $i - Starting continuous curl loop ($CurlsPerInstance times)...' -ForegroundColor Green
+for (`$j = 1; `$j -le $CurlsPerInstance; `$j++) {
+    Write-Host "Instance $i - Curl `$j/$CurlsPerInstance" -ForegroundColor Cyan
+    curl '$Target' | Out-Null
+    Write-Host "Instance $i - Curl `$j/$CurlsPerInstance completed" -ForegroundColor Yellow
+    if (`$j -lt $CurlsPerInstance) { Start-Sleep $CurlDelay }
+}
+Write-Host 'Instance $i - All curls completed! Closing in 3 seconds...' -ForegroundColor Green
+Start-Sleep 3
+exit
+"@
+
+    $process = Start-Process -FilePath "powershell.exe" -ArgumentList "-Command", $command -PassThru
 
     $runningProcesses += $process
 
