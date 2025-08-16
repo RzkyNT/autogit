@@ -5,6 +5,7 @@
  * Sistem commit yang efisien - hanya menggunakan beberapa file yang diupdate
  * daripada membuat ribuan file baru
  */
+ 
 
 class EfficientCommitBot {
     private $targetCommits = 1000;
@@ -85,6 +86,25 @@ class EfficientCommitBot {
     }
     
     /**
+     * Pull latest changes from GitHub
+     */
+    private function pullFromGitHub() {
+        $branch = trim(shell_exec('git branch --show-current 2>nul'));
+        if (empty($branch)) {
+            $branch = 'master';
+        }
+        
+        echo "⬇️ Pulling latest changes from GitHub (branch: $branch)...\n";
+        $result = shell_exec("git pull origin $branch 2>&1");
+        
+        if (strpos($result, 'error') === false && strpos($result, 'fatal') === false) {
+            echo "✅ Successfully pulled from GitHub\n";
+        } else {
+            echo "⚠️ Pull warning: " . trim($result) . "\n";
+        }
+    }
+    
+    /**
      * Run efficient commits
      */
     public function runEfficientCommits() {
@@ -95,6 +115,9 @@ class EfficientCommitBot {
         echo "📦 Batch size: {$this->batchSize} commits per push\n";
         echo "📁 Using only " . count($this->mainFiles) . " files (efficient!)\n";
         echo "⏰ Started: " . date('Y-m-d H:i:s') . "\n\n";
+        
+        // Pull from GitHub before starting commits
+        $this->pullFromGitHub();
         
         $totalBatches = ceil($this->targetCommits / $this->batchSize);
         $completedCommits = 0;
