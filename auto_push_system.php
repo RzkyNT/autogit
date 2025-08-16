@@ -112,23 +112,26 @@ class AutoPushSystem {
     private function performPush() {
         $config = $this->loadConfig();
         $remote = $config['remote_name'];
-        $branch = $config['branch_name'];
-        
-        // Try main branch first, then master
-        $pushCommand = "git push $remote $branch 2>&1";
-        $result = shell_exec($pushCommand);
-        
-        if (strpos($result, 'error') !== false || strpos($result, 'fatal') !== false) {
-            // Try master branch if main fails
-            if ($branch === 'main') {
-                echo "⚠️ Main branch failed, trying master...\n";
-                $pushCommand = "git push $remote master 2>&1";
-                $result = shell_exec($pushCommand);
-            }
+
+        // Auto-detect current branch
+        $currentBranch = trim(shell_exec('git branch --show-current 2>/dev/null'));
+        if (empty($currentBranch)) {
+            // Fallback method for older git versions
+            $currentBranch = trim(shell_exec('git rev-parse --abbrev-ref HEAD 2>/dev/null'));
         }
-        
+
+        if (empty($currentBranch)) {
+            $currentBranch = $config['branch_name']; // Use config as fallback
+        }
+
+        echo "🌿 Pushing to branch: $currentBranch\n";
+
+        // Push to current branch
+        $pushCommand = "git push $remote $currentBranch 2>&1";
+        $result = shell_exec($pushCommand);
+
         if (strpos($result, 'error') === false && strpos($result, 'fatal') === false) {
-            echo "✅ Successfully pushed to GitHub\n";
+            echo "✅ Successfully pushed to GitHub ($currentBranch)\n";
             $this->logPush(true, $result);
             return true;
         } else {

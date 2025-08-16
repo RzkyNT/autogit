@@ -284,25 +284,69 @@ class MultiCommitAutomation {
     }
     
     /**
-     * Perform git commit
+     * Perform git commit with lock handling
      */
     private function performGitCommit($message, $autoPush = false) {
-        shell_exec('git add .');
+        // Wait for any existing git operations to complete
+        $this->waitForGitLock();
+
+        $addResult = shell_exec('git add . 2>&1');
+        if (strpos($addResult, 'fatal') !== false) {
+            echo "⚠️ Git add failed: $addResult\n";
+            return false;
+        }
+
         $commitCommand = 'git commit -m "' . addslashes($message) . '" 2>&1';
-        shell_exec($commitCommand);
+        $commitResult = shell_exec($commitCommand);
+
+        if (strpos($commitResult, 'fatal') !== false && strpos($commitResult, 'nothing to commit') === false) {
+            echo "⚠️ Git commit failed: $commitResult\n";
+            return false;
+        }
 
         if ($autoPush) {
             $this->performGitPush();
         }
+
+        return true;
     }
 
     /**
-     * Perform git push
+     * Wait for git lock to be released
+     */
+    private function waitForGitLock($maxWait = 30) {
+        $lockFile = '.git/index.lock';
+        $waited = 0;
+
+        while (file_exists($lockFile) && $waited < $maxWait) {
+            echo "⏳ Waiting for git lock to be released...\n";
+            sleep(1);
+            $waited++;
+        }
+
+        // Force remove lock if it's been too long
+        if (file_exists($lockFile) && $waited >= $maxWait) {
+            echo "🔓 Force removing git lock file...\n";
+            unlink($lockFile);
+        }
+    }
+
+    /**
+     * Perform git push with auto-detection
      */
     private function performGitPush() {
-        $pushResult = shell_exec('git push origin main 2>&1');
+        // Auto-detect current branch
+        $currentBranch = trim(shell_exec('git branch --show-current 2>/dev/null'));
+        if (empty($currentBranch)) {
+            $currentBranch = trim(shell_exec('git rev-parse --abbrev-ref HEAD 2>/dev/null'));
+        }
+        if (empty($currentBranch)) {
+            $currentBranch = 'master'; // Default fallback
+        }
+
+        $pushResult = shell_exec("git push origin $currentBranch 2>&1");
         if (strpos($pushResult, 'error') === false && strpos($pushResult, 'fatal') === false) {
-            echo "📤 Pushed to GitHub\n";
+            echo "📤 Pushed to GitHub ($currentBranch)\n";
         } else {
             echo "⚠️ Push failed: $pushResult\n";
         }
