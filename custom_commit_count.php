@@ -24,9 +24,9 @@ function createCustomCommits($count, $pushEvery = 50) {
         $content = "Commit #$i\nTimestamp: " . date('Y-m-d H:i:s') . "\nRandom: " . rand(10000, 99999) . "\n";
         file_put_contents($filename, $content);
         
-        // Git commit
-        shell_exec('git add . 2>/dev/null');
-        shell_exec('git commit -m "Commit #' . $i . '" 2>/dev/null');
+        // Git commit (Windows compatible)
+        shell_exec('git add . 2>nul');
+        shell_exec('git commit -m "Commit #' . $i . '" 2>nul');
         
         // Progress indicator
         if ($i % 100 == 0 || $i == $count) {
