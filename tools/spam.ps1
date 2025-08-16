@@ -1,40 +1,32 @@
 param(
     [int]$Times = 50,
-    [string]$Target = "https://github.com/RzkyNT"
+    [string]$Target = "https://github.com/RzkyNT",
+    [int]$DelayMinMs = 200,
+    [int]$DelayMaxMs = 800,
+    [switch]$UseCurl
 )
 
-# versi curl-equivalent GET (bukan HEAD)
 $target = $Target
 $times = $Times
 
-# pakai curl.exe biar persis seperti: curl https://github.com/RzkyNT
-$curl = Get-Command curl.exe -ErrorAction SilentlyContinue
-
 for ($i = 1; $i -le $times; $i++) {
     try {
-        if ($curl) {
-            # -s = silent, -L = follow redirects, -o NUL = buang output (Windows)
-            $curlArgs = @("--silent", "--location", "--output", "NUL", $target)
-            $p = Start-Process -FilePath $curl.Path -ArgumentList $curlArgs -NoNewWindow -PassThru -Wait
-            if ($p.ExitCode -eq 0) {
-                Write-Output "[$i] OK via curl.exe"
-            } else {
-                throw "curl.exe exit code $($p.ExitCode)"
-            }
+        if ($UseCurl) {
+            # Pakai curl.exe dan pastikan stdout dibaca penuh (bukan dibuang ke NUL)
+            $curl = Get-Command curl.exe -ErrorAction Stop
+            # Jalankan curl dengan follow-redirect dan baca semua output di PowerShell
+            $null = (& $curl.Path "-L" $target 2>$null | Out-String)
+            Write-Output "[$i] OK via curl.exe"
         } else {
-            throw "curl.exe tidak ditemukan"
+            # Pakai Invoke-WebRequest (seperti alias 'curl' di PowerShell) dan baca body penuh
+            $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+            $r = Invoke-WebRequest -Uri $target -Method Get -MaximumRedirection 10 -WebSession $session
+            $null = $r.Content  # akses untuk memastikan body dibaca tuntas
+            Write-Output "[$i] OK via Invoke-WebRequest (Status: $($r.StatusCode))"
         }
     } catch {
-        # fallback: Invoke-WebRequest dengan header mirip curl default
-        try {
-            $headers = @{ "User-Agent" = "curl/8.0.1"; "Accept" = "*/*" }
-            $r = Invoke-WebRequest -Uri $target -Method Get -Headers $headers -MaximumRedirection 10 -UseBasicParsing
-            Write-Output "[$i] OK via IWR (Status: $($r.StatusCode))"
-        } catch {
-            Write-Output "[$i] ❌ Error: $_"
-        }
+        Write-Output "[$i] ❌ Error: $_"
     }
 
-    # jeda acak kecil supaya tidak terlalu agresif (opsional)
-    Start-Sleep -Milliseconds (Get-Random -Minimum 100 -Maximum 500)
+    Start-Sleep -Milliseconds (Get-Random -Minimum $DelayMinMs -Maximum $DelayMaxMs)
 }
