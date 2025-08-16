@@ -4,7 +4,7 @@ param(
     [int]$DelaySeconds = 1,
     [int]$MaxInstances = 5,  # Jumlah maksimal PowerShell window yang bisa buka bersamaan
     [int]$CurlsPerInstance = 100000,  # Berapa kali setiap instance melakukan curl
-    [int]$CurlDelay = 1  # Jeda antar curl dalam setiap instance (detik)
+    [int]$CurlDelay = 0  # Jeda antar curl dalam setiap instance (detik)
 )
 
 # Script dengan multiple instances PowerShell berjalan bersamaan
