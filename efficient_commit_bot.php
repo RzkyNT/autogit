@@ -29,39 +29,6 @@ class EfficientCommitBot {
         }
         
         $this->initializeFiles();
-        $this->checkGitAvailability();
-    }
-    
-    /**
-     * Check if Git is available and repository is initialized
-     */
-    private function checkGitAvailability() {
-        $gitVersion = shell_exec('git --version 2>&1');
-        if ($gitVersion === null || strpos($gitVersion, 'git version') === false) {
-            echo "❌ Error: Git is not installed or not found in PATH. Please ensure Git is installed and accessible.\n";
-            exit(1);
-        }
-
-        // Check if inside a Git repository
-        $gitDir = shell_exec('git rev-parse --is-inside-work-tree 2>&1');
-        if ($gitDir === null || trim($gitDir) !== 'true') {
-            echo "❌ Error: Current directory is not a Git repository. Please initialize a repository with 'git init' and set up the remote.\n";
-            exit(1);
-        }
-
-        // Check remote configuration
-        $remote = shell_exec('git remote -v 2>&1');
-        if (empty($remote) || strpos($remote, 'origin') === false) {
-            echo "❌ Error: No remote repository configured. Please set up a remote with 'git remote add origin <url>'.\n";
-            exit(1);
-        }
-
-        // Check for 'nul' in Git index
-        $indexFiles = shell_exec('git ls-files 2>&1');
-        if ($indexFiles !== null && strpos($indexFiles, 'nul') !== false) {
-            echo "❌ Error: File named 'nul' found in repository. Remove it with 'git rm nul' and commit.\n";
-            exit(1);
-        }
     }
     
     /**
@@ -121,83 +88,36 @@ class EfficientCommitBot {
      * Pull latest changes from GitHub
      */
     private function pullFromGitHub() {
-        $branch = shell_exec('git branch --show-current 2>&1');
-        $branch = $branch !== null ? trim($branch) : '';
+        $branch = trim(shell_exec('git branch --show-current 2>nul'));
         if (empty($branch)) {
             $branch = 'master';
-            echo "⚠️ Could not determine current branch. Defaulting to 'master'.\n";
         }
         
         echo "⬇️ Pulling latest changes from GitHub (branch: $branch)...\n";
         
-        // Check git status
-        $status = shell_exec('git status --porcelain 2>&1');
-        if ($status === null || strpos($status, 'error') !== false || strpos($status, 'fatal') !== false) {
-            echo "❌ Error: Failed to check git status: " . ($status !== null ? trim($status) : 'Command returned null') . "\n";
-            return false;
-        }
-        if (!empty(trim($status))) {
-            echo "📌 Committing local changes before pull...\n";
-            $addResult = shell_exec('git add . 2>&1');
-            if ($addResult !== null && strpos($addResult, 'error') === false && strpos($addResult, 'fatal') === false) {
-                $commitResult = shell_exec('git commit -m "Auto-commit before pull" 2>&1');
-                if (strpos($commitResult, 'nothing to commit') !== false) {
-                    echo "⚠️ No changes to commit\n";
-                } elseif (strpos($commitResult, 'error') !== false || strpos($commitResult, 'fatal') !== false) {
-                    echo "⚠️ Commit failed: " . trim($commitResult) . "\n";
-                    echo "📌 Stashing local changes instead...\n";
-                    $stashResult = shell_exec('git stash push -m "Auto-stash before pull" 2>&1');
-                    if (strpos($stashResult, 'error') !== false || strpos($stashResult, 'fatal') !== false) {
-                        echo "⚠️ Stash failed: " . trim($stashResult) . "\n";
-                    }
-                }
-            } else {
-                echo "⚠️ Add failed: " . trim($addResult) . "\n";
-                echo "📌 Stashing local changes instead...\n";
-                $stashResult = shell_exec('git stash push -m "Auto-stash before pull" 2>&1');
-                if (strpos($stashResult, 'error') !== false || strpos($stashResult, 'fatal') !== false) {
-                    echo "⚠️ Stash failed: " . trim($stashResult) . "\n";
-                }
-            }
+        // Simpan perubahan lokal jika ada
+        $status = shell_exec('git status --porcelain 2>nul');
+        if (!empty($status)) {
+            echo "📌 Stashing local changes...\n";
+            shell_exec('git stash push -m "Auto-stash before pull" 2>nul');
         }
         
         // Lakukan git pull
-        $result = shell_exec("git pull --rebase origin $branch 2>&1");
+        $result = shell_exec("git pull origin $branch 2>&1");
         
         if (strpos($result, 'error') === false && strpos($result, 'fatal') === false) {
             echo "✅ Successfully pulled from GitHub\n";
             // Kembalikan perubahan yang di-stash jika ada
-            if (!empty(trim($status))) {
+            if (!empty($status)) {
                 echo "📌 Popping stashed changes...\n";
-                $stashResult = shell_exec('git stash pop 2>&1');
-                if (strpos($stashResult, 'conflict') !== false) {
-                    echo "⚠️ Conflict detected when popping stash. Resetting to remote state...\n";
-                    $resetResult = shell_exec('git reset --hard origin/' . $branch . ' 2>&1');
-                    if (strpos($resetResult, 'error') !== false || strpos($resetResult, 'fatal') !== false) {
-                        echo "⚠️ Reset failed: " . trim($resetResult) . "\n";
-                    }
-                    shell_exec('git stash drop 2>&1');
-                }
+                shell_exec('git stash pop 2>nul');
             }
-            return true;
         } else {
             echo "⚠️ Pull warning: " . trim($result) . "\n";
-            if (strpos($result, 'invalid path \'nul\'')) {
-                echo "❌ Detected 'nul' error. Please check for problematic commits in the remote history with 'git log origin/master --name-only | findstr /i \"nul\"'.\n";
-            }
-            echo "🔄 Resetting to remote state...\n";
-            $fetchResult = shell_exec('git fetch origin 2>&1');
-            $resetResult = shell_exec('git reset --hard origin/' . $branch . ' 2>&1');
-            if (strpos($resetResult, 'error') !== false || strpos($resetResult, 'fatal') !== false) {
-                echo "⚠️ Reset failed: " . trim($resetResult) . "\n";
-                if (strpos($resetResult, 'invalid path \'nul\'')) {
-                    echo "❌ Detected 'nul' error. Please check for problematic commits in the remote history with 'git log origin/master --name-only | findstr /i \"nul\"'.\n";
-                }
-            }
-            if (!empty(trim($status))) {
+            // Jika pull gagal, batalkan stash pop untuk mencegah konflik lebih lanjut
+            if (!empty($status)) {
                 echo "⚠️ Keeping stashed changes due to pull failure\n";
             }
-            return false;
         }
     }
     
@@ -218,7 +138,6 @@ class EfficientCommitBot {
         
         $totalBatches = ceil($this->targetCommits / $this->batchSize);
         $completedCommits = 0;
-        $successfulCommits = 0;
         
         for ($batch = 1; $batch <= $totalBatches; $batch++) {
             $commitsInThisBatch = min($this->batchSize, $this->targetCommits - $completedCommits);
@@ -228,17 +147,13 @@ class EfficientCommitBot {
             for ($i = 1; $i <= $commitsInThisBatch; $i++) {
                 $commitNumber = $completedCommits + $i;
                 $this->updateFiles($commitNumber, $batch);
-                if ($this->performCommit($commitNumber)) {
-                    $successfulCommits++;
-                } else {
-                    echo "⚠️ Skipping commit #$commitNumber due to Git error\n";
-                }
+                $this->performCommit($commitNumber);
                 
                 // Progress indicator
                 if ($commitNumber % 100 == 0 || $commitNumber == $this->targetCommits) {
                     $progress = round($commitNumber / $this->targetCommits * 100, 1);
                     $elapsed = time() - $startTime;
-                    $rate = round($successfulCommits / max($elapsed, 1), 1);
+                    $rate = round($commitNumber / max($elapsed, 1), 1);
                     echo "📊 $commitNumber/{$this->targetCommits} ($progress%) - Rate: $rate commits/sec\n";
                 }
             }
@@ -257,11 +172,10 @@ class EfficientCommitBot {
         
         $endTime = time();
         $duration = $endTime - $startTime;
-        $avgRate = round($successfulCommits / max($duration, 1), 1);
+        $avgRate = round($this->targetCommits / max($duration, 1), 1);
         
         echo "\n🎉 EFFICIENT COMMIT COMPLETED!\n";
-        echo "✅ Total commits attempted: {$this->targetCommits}\n";
-        echo "✅ Total commits successful: $successfulCommits\n";
+        echo "✅ Total commits: {$this->targetCommits}\n";
         echo "⏱️ Duration: " . gmdate('H:i:s', $duration) . "\n";
         echo "📈 Average rate: $avgRate commits/sec\n";
         echo "📁 Files used: " . count($this->mainFiles) . " (vs {$this->targetCommits} individual files)\n";
@@ -307,39 +221,18 @@ class EfficientCommitBot {
      * Perform git commit
      */
     private function performCommit($commitNumber) {
-        $addResult = shell_exec('git add . 2>&1');
-        if ($addResult === null || strpos($addResult, 'error') !== false || strpos($addResult, 'fatal') !== false) {
-            echo "❌ Error: Failed to execute 'git add' for commit #$commitNumber: " . ($addResult !== null ? trim($addResult) : 'Command returned null') . "\n";
-            if ($addResult !== null && strpos($addResult, 'invalid path \'nul\'')) {
-                echo "❌ Detected 'nul' error. Please check for problematic commits in the remote history with 'git log origin/master --name-only | findstr /i \"nul\"'.\n";
-            }
-            return false;
-        }
+        shell_exec('git add . 2>nul');
         $message = "Efficient commit #$commitNumber - Updated " . count($this->mainFiles) . " files";
-        $commitResult = shell_exec('git commit -m "' . addslashes($message) . '" 2>&1');
-        if (strpos($commitResult, 'nothing to commit') !== false) {
-            echo "⚠️ Warning: No changes to commit for #$commitNumber\n";
-            return false;
-        } elseif (strpos($commitResult, 'error') !== false || strpos($commitResult, 'fatal') !== false) {
-            echo "❌ Error: Commit failed for #$commitNumber: " . trim($commitResult) . "\n";
-            if (strpos($commitResult, 'invalid path \'nul\'')) {
-                echo "❌ Detected 'nul' error. Please check for problematic commits in the remote history with 'git log origin/master --name-only | findstr /i \"nul\"'.\n";
-            }
-            return false;
-        }
-        echo "✅ Commit #$commitNumber successful\n";
-        return true;
+        shell_exec('git commit -m "' . addslashes($message) . '" 2>nul');
     }
     
     /**
      * Push to GitHub
      */
     private function pushToGitHub() {
-        $branch = shell_exec('git branch --show-current 2>&1');
-        $branch = $branch !== null ? trim($branch) : '';
+        $branch = trim(shell_exec('git branch --show-current 2>nul'));
         if (empty($branch)) {
             $branch = 'master';
-            echo "⚠️ Could not determine current branch. Defaulting to 'master'.\n";
         }
         
         $result = shell_exec("git push origin $branch 2>&1");
@@ -348,24 +241,6 @@ class EfficientCommitBot {
             echo "✅ Pushed to GitHub ($branch)\n";
         } else {
             echo "⚠️ Push warning: " . trim($result) . "\n";
-            if (strpos($result, 'invalid path \'nul\'')) {
-                echo "❌ Detected 'nul' error. Please check for problematic commits in the remote history with 'git log origin/master --name-only | findstr /i \"nul\"'.\n";
-            }
-            echo "🔄 Attempting to resolve non-fast-forward by pulling...\n";
-            if ($this->pullFromGitHub()) {
-                // Retry push after successful pull
-                $retryResult = shell_exec("git push origin $branch 2>&1");
-                if (strpos($retryResult, 'error') === false && strpos($retryResult, 'fatal') === false) {
-                    echo "✅ Successfully pushed to GitHub after retry ($branch)\n";
-                } else {
-                    echo "⚠️ Push failed after retry: " . trim($retryResult) . ". Continuing with next batch...\n";
-                    if (strpos($retryResult, 'invalid path \'nul\'')) {
-                        echo "❌ Detected 'nul' error. Please check for problematic commits in the remote history with 'git log origin/master --name-only | findstr /i \"nul\"'.\n";
-                    }
-                }
-            } else {
-                echo "⚠️ Pull failed, skipping push for this batch.\n";
-            }
         }
     }
     
