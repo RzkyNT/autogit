@@ -39,8 +39,11 @@ function createCustomCommits($count, $pushEvery = 50) {
         // Push to GitHub
         if ($i % $pushEvery == 0 || $i == $count) {
             echo "📤 Pushing commits $i...\n";
-            $branch = trim(shell_exec('git branch --show-current 2>/dev/null')) ?: 'master';
-            shell_exec("git push origin $branch 2>/dev/null");
+            $branch = trim(shell_exec('git branch --show-current 2>nul'));
+            if (empty($branch)) {
+                $branch = 'master';
+            }
+            shell_exec("git push origin $branch 2>nul");
         }
         
         // Micro delay to prevent overwhelming
