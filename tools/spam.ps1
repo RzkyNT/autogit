@@ -2,7 +2,7 @@ param(
     [int]$Times = 100000,
     [string]$Target = "https://camo.githubusercontent.com/62cc6d4c18c13fc882328f0d709656f424a3f5a72aed768e7b60b2142646eaef/68747470733a2f2f6b6f6d617265762e636f6d2f67687076632f3f757365726e616d653d727a6b796e74266c6162656c3d50726f66696c65253230766965777326636f6c6f723d306537356236267374796c653d666c6174",
     [int]$DelaySeconds = 1,
-    [int]$MaxInstances = 5,  # Jumlah maksimal PowerShell window yang bisa buka bersamaan
+    [int]$MaxInstances = 10,  # Jumlah maksimal PowerShell window yang bisa buka bersamaan
     [int]$CurlsPerInstance = 50,  # Berapa kali setiap instance melakukan curl
     [int]$CurlDelay = 2  # Jeda antar curl dalam setiap instance (detik)
 )
